@@ -1,12 +1,13 @@
 from __future__ import annotations
 import asyncio
 import logging
+from datetime import datetime,timezone
 from aiogram import Bot,Dispatcher,F,Router
 from aiogram.filters import Command,CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State,StatesGroup
 from aiogram.types import CallbackQuery,FSInputFile,Message
-from .keyboards import dashboard_keyboard,export_keyboard,groups_keyboard,settings_keyboard,leads_keyboard,delete_keyboard
+from .keyboards import dashboard_keyboard,export_keyboard,groups_keyboard,settings_keyboard,leads_keyboard,delete_keyboard,resume_keyboard
 from ..services.export_service import ExportService
 from ..services.backup_service import BackupService
 from ..telegram_client.scanner import ScanPaused
@@ -82,14 +83,24 @@ def build_router(settings,repo,discovery,scanner):
     async def export_group(q):
         if not authorized(q,settings.admin_telegram_id): return await deny(q)
         gid=int(q.data.split(":")[1]); path=exports.xlsx(False,gid); await q.message.answer_document(FSInputFile(path),caption="Group leads export"); await q.answer()
+    async def run_scan(q,gid:int):
+        message_limit=int(repo.get_setting("scan_message_limit","500")); days=int(repo.get_setting("scan_days","30")); await q.answer("Scan started"); note=await q.message.answer(f"Scanning last {message_limit} messages / {days} days…")
+        try:
+            x=await scanner.scan(gid,message_limit,days); await note.edit_text(f"Scan complete. Messages: {x['messages']} | Users: {x['users']} | New: {x['new_users']}")
+        except ScanPaused as exc: await note.edit_text(f"Telegram requested a FloodWait of {exc.seconds} seconds. Job paused; no bypass attempted. Resume after the wait.",reply_markup=resume_keyboard(gid))
+        except Exception as exc: log.exception("Scan failed"); await note.edit_text(f"Scan failed safely: {type(exc).__name__}")
     @r.callback_query(F.data.startswith("scan:"))
     async def scan(q):
         if not authorized(q,settings.admin_telegram_id): return await deny(q)
-        gid=int(q.data.split(":")[1]); message_limit=int(repo.get_setting("scan_message_limit","500")); days=int(repo.get_setting("scan_days","30")); await q.answer("Scan started"); note=await q.message.answer(f"Scanning last {message_limit} messages / {days} days…")
-        try:
-            x=await scanner.scan(gid,message_limit,days); await note.edit_text(f"Scan complete. Messages: {x['messages']} | Users: {x['users']} | New: {x['new_users']}")
-        except ScanPaused as exc: await note.edit_text(f"Telegram requested a FloodWait of {exc.seconds} seconds. Job paused; no bypass attempted. Retry after the wait.")
-        except Exception as exc: log.exception("Scan failed"); await note.edit_text(f"Scan failed safely: {type(exc).__name__}")
+        await run_scan(q,int(q.data.split(":")[1]))
+    @r.callback_query(F.data.startswith("resume_scan:"))
+    async def resume_scan(q):
+        if not authorized(q,settings.admin_telegram_id): return await deny(q)
+        gid=int(q.data.split(":")[1]); paused=repo.paused_job_for_group(gid)
+        if not paused: return await q.answer("No paused scan exists.",show_alert=True)
+        if paused["resume_after"] and datetime.fromisoformat(paused["resume_after"])>datetime.now(timezone.utc):
+            return await q.answer(f"Wait until {paused['resume_after']}",show_alert=True)
+        await run_scan(q,gid)
     @r.callback_query(F.data=="stats")
     async def stats(q):
         if not authorized(q,settings.admin_telegram_id): return await deny(q)

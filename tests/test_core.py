@@ -21,6 +21,8 @@ def test_schema_and_dedup(repo):
     uid2,new=repo.upsert_user(UserRecord(456,"alice","Alice",None,"Alice")); assert uid==uid2 and not new
     now=datetime.now(timezone.utc).isoformat(); repo.add_activity(uid,gid,2,now,now,20,"Medium"); repo.add_activity(uid,gid,1,now,now,15,"Low")
     assert repo.export_rows()[0]["message_count"]==3
+    repo.record_search("test",2)
+    with repo.db.connect() as c: assert c.execute("SELECT result_count FROM search_keywords WHERE keyword='test'").fetchone()[0]==2
 
 def test_batch_inserts(repo):
     gid,_=repo.upsert_group(GroupRecord(1,"G")); now=datetime.now(timezone.utc).isoformat()
@@ -45,4 +47,3 @@ class Event:
     def __init__(self,id): self.from_user=User(id)
 def test_admin_auth():
     assert authorized(Event(10),10); assert not authorized(Event(11),10)
-

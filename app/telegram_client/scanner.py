@@ -29,7 +29,8 @@ class ScanningService:
                 seen=msg.date.astimezone(timezone.utc).isoformat(); uid,created=self.repo.upsert_user(UserRecord(sender.id,sender.username,sender.first_name,sender.last_name," ".join(filter(None,[sender.first_name,sender.last_name])) or sender.username or str(sender.id),bool(sender.bot),bool(sender.deleted)),seen)
                 new_users+=int(created); activity[uid].append(seen)
             for uid,times in activity.items():
-                count=len(times); last=max(times); self.repo.add_activity(uid,group_id,count,min(times),last,activity_score(count,last),activity_level(count))
+                count=len(times); last=max(times); previous=self.repo.activity_for(uid,group_id); total=count+(previous["message_count"] if previous else 0)
+                self.repo.add_activity(uid,group_id,count,min(times),last,activity_score(total,last),activity_level(total))
             self.repo.set_group_status(group_id,"COMPLETED"); self.repo.finish_job(job,"COMPLETED",scanned,len(activity),new_users)
             return {"messages":scanned,"users":len(activity),"new_users":new_users}
         except FloodWaitError as exc:
@@ -38,4 +39,3 @@ class ScanningService:
         except ChatAdminRequiredError as exc: self.repo.set_group_status(group_id,"ADMIN_REQUIRED"); self.repo.finish_job(job,"ADMIN_REQUIRED",scanned,error=type(exc).__name__); raise
         except RPCError as exc: self.repo.set_group_status(group_id,"FAILED"); self.repo.finish_job(job,"FAILED",scanned,error=type(exc).__name__); raise
         except Exception as exc: self.repo.set_group_status(group_id,"FAILED"); self.repo.finish_job(job,"FAILED",scanned,error=type(exc).__name__); raise
-

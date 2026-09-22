@@ -20,6 +20,12 @@ class Repository:
             row=c.execute("SELECT id FROM users WHERE telegram_user_id=?",(u.telegram_user_id,)).fetchone(); return row[0], old is None
     def add_activity(self,user_id:int,group_id:int,count:int,first_seen:str,last_seen:str,score:float,level:str):
         with self.db.connect() as c: c.execute("""INSERT INTO user_group_activity(user_id,group_id,message_count,first_seen,last_seen,activity_score,activity_level) VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id,group_id) DO UPDATE SET message_count=user_group_activity.message_count+excluded.message_count,first_seen=MIN(user_group_activity.first_seen,excluded.first_seen),last_seen=MAX(user_group_activity.last_seen,excluded.last_seen),activity_score=excluded.activity_score,activity_level=excluded.activity_level""",(user_id,group_id,count,first_seen,last_seen,score,level))
+    def activity_for(self,user_id:int,group_id:int):
+        with self.db.connect() as c: return c.execute("SELECT * FROM user_group_activity WHERE user_id=? AND group_id=?",(user_id,group_id)).fetchone()
+    def record_search(self,keyword:str,result_count:int):
+        with self.db.connect() as c: c.execute("""INSERT INTO search_keywords(keyword,last_searched_at,result_count) VALUES(?,?,?) ON CONFLICT(keyword) DO UPDATE SET last_searched_at=excluded.last_searched_at,result_count=excluded.result_count""",(keyword,now(),result_count))
+    def paused_job_for_group(self,gid:int):
+        with self.db.connect() as c: return c.execute("SELECT * FROM scan_jobs WHERE group_id=? AND status='PAUSED' ORDER BY job_id DESC LIMIT 1",(gid,)).fetchone()
     def list_groups(self,limit=10,offset=0):
         with self.db.connect() as c: return c.execute("""SELECT g.*,COUNT(DISTINCT CASE WHEN u.is_bot=0 AND u.is_deleted=0 THEN a.user_id END) leads,SUM(CASE WHEN a.activity_level='High' AND u.is_bot=0 AND u.is_deleted=0 THEN 1 ELSE 0 END) active_leads FROM groups g LEFT JOIN user_group_activity a ON a.group_id=g.id LEFT JOIN users u ON u.id=a.user_id GROUP BY g.id ORDER BY g.id DESC LIMIT ? OFFSET ?""",(limit,offset)).fetchall()
     def group_by_id(self,gid):

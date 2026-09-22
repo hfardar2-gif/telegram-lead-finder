@@ -3,6 +3,7 @@ import asyncio
 import logging
 from datetime import datetime,timezone
 from aiogram import Bot,Dispatcher,F,Router
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.filters import Command,CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State,StatesGroup
@@ -132,4 +133,5 @@ def build_router(settings,repo,discovery,scanner):
     return r
 
 async def run_bot(settings,repo,discovery,scanner):
-    bot=Bot(settings.bot_token); dp=Dispatcher(); dp.include_router(build_router(settings,repo,discovery,scanner)); await dp.start_polling(bot)
+    session=AiohttpSession(proxy=settings.proxy_url) if settings.proxy_url else None
+    bot=Bot(settings.bot_token,session=session); dp=Dispatcher(); dp.include_router(build_router(settings,repo,discovery,scanner)); await dp.start_polling(bot)

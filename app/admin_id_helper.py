@@ -4,6 +4,7 @@ import asyncio
 import os
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
@@ -16,7 +17,9 @@ async def main() -> None:
     token = os.getenv("BOT_TOKEN", "").strip()
     if not token:
         raise SystemExit("Missing BOT_TOKEN. Add it to the local .env file first.")
-    bot = Bot(token)
+    proxy_url = os.getenv("PROXY_URL", "").strip() or None
+    session = AiohttpSession(proxy=proxy_url) if proxy_url else None
+    bot = Bot(token, session=session)
     dispatcher = Dispatcher()
     finished = asyncio.Event()
 

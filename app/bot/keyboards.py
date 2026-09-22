@@ -33,3 +33,6 @@ def leads_keyboard(page):
 
 def delete_keyboard(gid):
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Confirm delete",callback_data=f"delete_group:{gid}"),InlineKeyboardButton(text="Cancel",callback_data="groups")]])
+
+def resume_keyboard(gid):
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Resume scan",callback_data=f"resume_scan:{gid}"),InlineKeyboardButton(text="Groups",callback_data="groups")]])

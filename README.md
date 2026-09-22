@@ -62,7 +62,7 @@ Open the verified `@BotFather`, send `/newbot`, use `Telegram Lead Finder`, then
 | `SESSION_PATH` | Telethon session path (without extension) |
 | `AUTO_BACKUP_HOURS` | Automatic backup interval; use `0` to disable |
 
-The setup wizard masks `API_HASH` and `BOT_TOKEN`. To learn your Telegram ID before locking the bot, use a trusted ID bot or temporarily set your candidate ID and send `/myid`; the command reports the sender ID but exposes no secret. Update `ADMIN_TELEGRAM_ID` and restart.
+The setup wizard masks `API_HASH` and `BOT_TOKEN`. To obtain your admin ID safely, first save `BOT_TOKEN`, run `python -m app.admin_id_helper`, and send `/start` to your new bot. The helper prints and replies with your public Telegram User ID, then stops. Save that number as `ADMIN_TELEGRAM_ID`. The normal admin bot rejects every management command from other IDs.
 
 ## First Login
 

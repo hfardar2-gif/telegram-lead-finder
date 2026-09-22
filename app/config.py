@@ -18,6 +18,7 @@ class Settings:
     session_path: Path
     log_level: str = "INFO"
     auto_backup_hours: int = 24
+    proxy_url: str | None = None
 
 class ConfigurationError(RuntimeError):
     pass
@@ -48,5 +49,5 @@ def load_settings() -> Settings:
         session_path=_resolve(os.getenv("SESSION_PATH", ""), "data/sessions/telegram_user"),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         auto_backup_hours=max(0, int(os.getenv("AUTO_BACKUP_HOURS", "24"))),
+        proxy_url=os.getenv("PROXY_URL", "").strip() or None,
     )
-

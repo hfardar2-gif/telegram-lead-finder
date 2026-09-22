@@ -25,5 +25,5 @@ class DiscoveryService:
             except Exception as exc: log.info("Optional group details unavailable: %s",type(exc).__name__)
             _,created=self.repo.upsert_group(GroupRecord(entity.id,getattr(entity,"title","Untitled"),username,f"https://t.me/{username}" if username else None,desc,members,keyword,group_type))
             found+=1; new+=int(created); existing+=int(not created)
+        self.repo.record_search(keyword,found)
         return {"keyword":keyword,"found":found,"new":new,"existing":existing}
-
